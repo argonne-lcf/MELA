@@ -1,0 +1,46 @@
+.racks{
+    stroke: rgb(0,0,0);
+    stroke-width: 2;
+}
+
+.cages{
+    stroke: rgb(122, 123, 124);
+    stroke-width: 2;
+    opacity: 1;
+}
+.nodes{
+    stroke:rgb(111, 111, 112);
+    stroke-width: 0.5;
+}
+.radial-diagram{
+    stroke-width: 1.5;
+    stroke: black;
+}
+
+.rack_names {
+    stroke:black;
+    fill:#77787a;
+}
+.ring_text{
+    font-weight: normal;
+    fill:#77787a;
+}
+
+.year_sel, .month_sel{
+    stroke: rgb(0,0,0);
+    stroke-width: 1;
+    fill:none;
+}
+.bottom_year_sel_txt{
+    font-size: 0.6em;
+    stroke: #98999b;
+}
+.axisL{
+    font-size: 0.5em;
+}
+
+circle:hover {
+    color:orangered;
+}
+
+

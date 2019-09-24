@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Log Analyser</title>
+    <link rel="icon" type="image/jpg" href="{{ url_for('static',filename='img/cn.jpg')}}">
+	<link rel="stylesheet" href="{{ url_for('static',filename='css/log-main.css')}}">
+	<link rel="stylesheet" href="{{ url_for('static',filename='css/node-layout.css')}}">
+	<link rel="stylesheet" href="{{ url_for('static',filename='css/timeline.css')}}">
+
+
+	<!--<script src="{{ url_for('static',filename='js/moment.js')}}"></script>-->
+    <script src="{{ url_for('static',filename='js/d3.v4.min.js')}}"></script>
+	<script src="{{ url_for('static',filename='js/fisheye.js')}}"></script>
+	<script src="{{ url_for('static',filename='js/stacked_words.js')}}"></script>
+	<script src="{{ url_for('static',filename='js/timeline_zoom.js')}}"></script>
+	<script src="{{ url_for('static',filename='js/simple_slider.js')}}"></script>
+	<script src="{{ url_for('static',filename='js/d3.layout.cloud.js')}}"></script>
+
+	<script src="{{ url_for('static',filename='js/pie-chart.js')}}"></script>
+	<script src="{{ url_for('static',filename='js/stream_graph.js')}}"></script>
+	<script src="{{ url_for('static',filename='js/d3-scale-chromatic.v0.3.min.js')}}"></script>
+	<script src="{{ url_for('static',filename='js/jquery.min.js')}}"></script>
+    <script src="{{ url_for('static',filename='js/chroma.min.js')}}"></script>
+
+	<script type="text/javascript" src="/static/js/sijax/sijax.js"></script>
+	<script src="{{url_for('static',filename='js/d3-lasso.min.js')}}"></script>
+	<script src="{{ url_for('static',filename='bower_components/elasticsearch/elasticsearch.js')}}"></script>
+	<script src="{{ url_for('static',filename='bower_components/babel-standalone/babel.min.js')}}"></script>
+
+	<script src="{{ url_for('static',filename='js/misc-func.js')}}"></script>
+	<script src="{{ url_for('static',filename='js/detailedPlot_line.js')}}"></script>
+	<script src="{{ url_for('static',filename='js/correlationsedc.js')}}"></script>
+	<script src="{{ url_for('static',filename='js/linear-timeline.js')}}"></script>
+	<script src="{{ url_for('static',filename='js/ring-layout.js')}}"></script>
+	<script src="{{ url_for('static',filename='js/node-layout.js')}}"></script>
+	<script src="{{ url_for('static',filename='js/jquery.dataTables.min.js')}}"></script>
+	<script src="{{ url_for('static',filename='js/makeTable.js')}}"></script>
+	<script src="{{ url_for('static',filename='js/report-table.js')}}"></script>
+	<script type="text/javascript">{{ g.sijax.get_js()|safe }} </script>
+
+
+</head>
+<body>
+
+	<div id="main-div">
+		<table id="main-table">
+		 	<tr class="table-rows" id="table-row1">
+			    <td class="table-cols" id="table-rc11" align="center"><h2>MELA</h2></td>
+			    <td class="table-cols" id="table-rc12" colspan="2"></td>
+		  	</tr>
+		  	<tr class="table-rows" id="table-row2">
+			    <td class="table-cols" id="table-rc21">
+
+				</td>
+			    <td class="table-cols" id="table-rc22" colspan="2"></td>
+		  	</tr>
+			<tr class="table-rows" id="table-row3">
+			    <td class="table-cols" id="table-rc31">
+
+					<table id="controlView">
+						<tr class="selections" id="cname_ids">
+							<td><label id="cname_labels" for="cnames">CNAME IDS:</label>
+							</td>
+							<td>
+								{% if ori_response %}
+								<select id="cname_selections" class="selections">
+									{% for cname in ori_response.cnames_all %}
+									<option class="cname-group" value="{{cname}}">CNAME_{{cname}}</option>
+									{% endfor %}
+								</select>
+								{% else %}
+								<h1>Cnames should be here!</h1>
+								{% endif %}
+							</td>
+						</tr>
+						<tr>
+							<td class="selected-time" id="timeDropdownLabel">
+
+							</td>
+							<td class="selected-time" id="timeDropdown">
+
+							</td>
+						</tr>
+
+						<tr>
+							<td class="selections" id="sedc-selections">
+								<label for="sedc">SEDC Measurements:</label>
+							</td>
+							<td>
+								{% if ori_response %}
+								<select id="sedcM" multiple>
+									{% for mval in ori_response.mvals %}
+									<option value={{mval}}>{{mval}}</option>
+									{% endfor %}
+								</select>
+								{% else %}
+								<h1>Hello, World!</h1>
+								{% endif %}
+							</td>
+						</tr>
+						<tr>
+							<td class="selections">
+								<label for="sedc">Dim Reduction:</label>
+							</td>
+							<td>
+								<select id="dimR">
+									<option value="PCA">PCA</option>
+									<option value="LDA">LDA</option>
+									<option value="TSNE">TSNE</option>
+								</select>
+							</td>
+						</tr>
+						<tr>
+							<td>
+								<button type="button" id="cv_button">Enter</button>
+							</td>
+						</tr>
+						<tr id="controlView-bottom">
+
+						</tr>
+
+
+					</table>
+
+				</td>
+			    <td class="table-cols" id="table-rc33">
+					<button type="button" id="detailed_plt" style="visibility: hidden">SEDC View</button>
+					<button type="button" id="timeline_zoom" style="visibility: hidden"> </button>
+					<label class="switch" id="switch" style="visibility: hidden">
+						<input id="check-slider" type="checkbox" name="overlay-t" checked>
+						<span class="slider round"></span>
+						<!--Zoom Overlay-->
+					</label>
+				</td>
+			</tr>
+
+	</table>
+
+	</div>
+
+	<script type="text/javascript">
+
+        var sedc_cols = [];
+		var stc = 0,
+			edc = 5000;
+
+        var color = d3.scaleSequential(d3.interpolatePuRd)
+            .domain([stc, edc]);
+
+
+        var colorWc = d3.scaleLinear()
+            .domain(d3.range(1, 5))
+            .range(['#eebf2e', '#3bd62d', '#1ec8c7', "#1e58c8", "#831ec8"]);
+
+        var tl_dict ={
+            tl_hour:[],
+            tl_minute:[],
+            tl_day:[],
+            tl_dow:[],
+            tl_year:[],
+            tl_month:[]
+
+        };
+
+        var linear_time = {
+            begin:"",
+			end:""
+		};
+        var radial_hour = [];
+		var client = new elasticsearch.Client({hosts: 'http://localhost:9200'});
+    client.search(query).then(function (resp) {
+    	appendLinearTimeline(resp.aggregations.by_day.buckets);
+		appendNodeLayout(resp,color);
+
+		// ring layout initialization
+		appendRings(stc,edc);
+		updateRings(d3.range(4608), 2);
+		d3.select("#sedcM")
+			.on('change', function(d) {
+				var optionSedc = d3.select("#sedcM").selectAll('option');
+				var s = optionSedc.filter(function(d) {
+					return this.selected;
+				});
+				if (s.nodes().length >= 11) {
+					optionSedc.filter(function() {
+						return !this.selected
+					})
+						.property('disabled', false);
+				} else {
+					optionSedc.property('disabled', false);
+				}
+			});
+
+            d3.select("#cv_button")
+                .on("click", function(){
+
+                    clickedEnter(null);
+                });
+
+    });
+
+
+    function clickedEnter(sedc_cols_local){
+
+        var par = {};
+
+        d3.select("#controlView-bottom svg").transition().remove();
+
+        var sel = document.getElementById('dimR');
+        var dimRed = sel.options[sel.selectedIndex].value;
+        var cname_class = d3.select("#sedcM option").attr("class");
+        var cname = d3.select("#cname_selections").node().value;
+        var sedcM = d3.select("#sedcM").node().value;
+
+        var dimRes =[];
+        var dRes = [];
+
+
+        if(sedc_cols_local === null ){
+
+            dimRes = d3.select("#sedcM")
+                .selectAll("option")
+                .filter(function (d, i) {
+                    return this.selected;
+                });
+
+
+            dimRes._groups[0].forEach(function (a) {
+                dRes.push(a.attributes.value.value);
+            });
+
+            sedc_cols = dRes;
+
+		}else
+		    dRes = sedc_cols;
+
+
+
+        if("dRes" in par && "cname_pca" in par && "dimRed" in par && par["dimRed"] !== dimRed
+            && par["cname_pca"] === cname && arraysEqual(dRes, par["dRes"])){
+
+            Sijax.request('dimensional_reduction', [cname, dimRed]);
+
+        }else {
+            var timeRes = d3.select("#timeSels")
+                .selectAll("option")
+                .filter(function () {
+                    return this.selected;
+                });
+
+            var tRes = [];
+            timeRes._groups[0].forEach(function (a) {
+                tRes.push(a.attributes.value.value);
+            });
+
+            var ts;
+
+            if(tRes.length === 0){
+                if (radial_hour.length === 0)
+                    ts = linear_time["begin"];
+                else
+                    ts = radial_hour[0];
+            }else{
+                ts = tRes[0]
+            }
+            par['cnamePca'] = cname;
+            par['dimRed'] = dimRed;
+            par['dRes'] = dRes;
+            Sijax.request('getDR', [cname_class, sedcM, dRes, ts, cname, dimRed]);
+        }
+	}
+	</script>
+
+
+
+</body>
+</html>
