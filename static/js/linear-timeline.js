@@ -151,7 +151,7 @@ function appendLinearTimeline(data){
             "aggs": {
                 "group_by_cname_id": {
                     "terms": {
-                        "size": 5000,"field": "cname_id","order": {"_key": "asc"}
+                        "field": "cname_id","order": {"_key": "asc"}
                     }
                 }
             }
